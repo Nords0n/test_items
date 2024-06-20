@@ -1,7 +1,8 @@
 import pytest
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 
 @pytest.fixture(scope="function")
 def browser2():
@@ -13,31 +14,27 @@ def browser2():
     driver.quit()
 
 def pytest_addoption(parser):
-    parser.addoption('--browser_name', action='store', default=None,
-                     help="Choose browser: chrome or firefox")
-
+    parser.addoption('--browser_name', action='store', default='chrome', help="Choose browser: chrome or firefox")
+    parser.addoption('--language', action='store', default=None, help="Choose language: en, ru, etc.")
 
 @pytest.fixture(scope="function")
-def browser(request):
+def browser3(request):
     browser_name = request.config.getoption("browser_name")
-    browser = None
+    user_language = request.config.getoption("language")
+    options = None
+
     if browser_name == "chrome":
-        print("\nstart chrome browser for test..")
-        browser = webdriver.Chrome()
+        options = webdriver.ChromeOptions()
+        if user_language:
+            options.add_experimental_option('prefs', {'intl.accept_languages': user_language})
+        browser = webdriver.Chrome(options=options)
     elif browser_name == "firefox":
-        print("\nstart firefox browser for test..")
-        browser = webdriver.Firefox()
+        options = webdriver.FirefoxOptions()
+        if user_language:
+            options.set_preference("intl.accept_languages", user_language)
+        browser = webdriver.Firefox(options=options)
     else:
         raise pytest.UsageError("--browser_name should be chrome or firefox")
-    yield browser
-    print("\nquit browser..")
-    browser.quit()
 
-@pytest.fixture(scope="function")
-def browser3(user_language=None):
-    options = Options()
-    options.add_experimental_option('prefs', {'intl.accept_languages': user_language})
-    browser3 = webdriver.Chrome(options=options)
-    fp = webdriver.FirefoxProfile()
-    fp.set_preference("intl.accept_languages", user_language)
-    browser3 = webdriver.Firefox(firefox_profile=fp)
+    yield browser
+    browser.quit()
